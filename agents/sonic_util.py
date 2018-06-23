@@ -4,9 +4,18 @@ Environments and wrappers for Sonic training.
 
 import gym
 import numpy as np
-
+import gzip
+import retro
+import os
 from baselines.common.atari_wrappers import WarpFrame, FrameStack
 from retro_contest.local import make
+import logging
+
+import pandas as pd
+train_states = pd.read_csv('../data/sonic_env/sonic-train.csv')
+validation_states = pd.read_csv('../data/sonic_env/sonic-validation.csv')
+
+logger = logging.getLogger(__name__)
 
 def make_env(stack=True, scale_rew=True):
     """
@@ -19,8 +28,9 @@ def make_env(stack=True, scale_rew=True):
     if scale_rew:
         env = RewardScaler(env)
     env = WarpFrame(env)
-    if stack:
-        env = FrameStack(env, 4)
+    # if stack:
+    #     env = FrameStack(env, 4)
+    env = EpisodeInfo(env)
     return env
 
 class SonicDiscretizer(gym.ActionWrapper):
@@ -110,3 +120,33 @@ class RandomGameReset(gym.Wrapper):
                 self.env.unwrapped.initial_state = fh.read()
 
         return self.env.reset()
+
+class EpisodeInfo(gym.Wrapper):
+    """
+    Add information about episode end and total final reward
+    """
+    def __init__(self, env):
+        super(EpisodeInfo, self).__init__(env)
+        self._ep_len = 0
+        self._ep_rew_total = 0
+
+    def reset(self, **kwargs): # pylint: disable=E0202
+        self._ep_len = 0
+        self._ep_rew_total = 0
+        return self.env.reset(**kwargs)
+
+    def step(self, action): # pylint: disable=E0202
+        obs, rew, done, info = self.env.step(action)
+        self._ep_len += 1
+        self._ep_rew_total += rew
+
+        if done:
+            if "episode" not in info:
+                info = {"episode": {"l": self._ep_len, "r": self._ep_rew_total}}
+            elif isinstance(info, dict):
+                if "l" not in info["episode"]:
+                    info["episode"]["l"] = self._ep_len
+                if "r" not in info["episode"]:
+                    info["episode"]["r"] = self._ep_rew_total
+
+        return obs, rew, done, info
