@@ -6,14 +6,16 @@ import gym
 import numpy as np
 
 from baselines.common.atari_wrappers import WarpFrame, FrameStack
-import gym_remote.client as grc
+from retro_contest.local import make
 
 def make_env(stack=True, scale_rew=True):
     """
     Create an environment with some standard wrappers.
     """
-    env = grc.RemoteEnv('tmp/sock')
+    env = make("SonicTheHedgehog2-Genesis", state="EmeraldHillZone.Act2")
     env = SonicDiscretizer(env)
+    env = AllowBacktracking(env)
+    env = RandomGameReset(env)
     if scale_rew:
         env = RewardScaler(env)
     env = WarpFrame(env)
@@ -75,3 +77,36 @@ class AllowBacktracking(gym.Wrapper):
         rew = max(0, self._cur_x - self._max_x)
         self._max_x = max(self._max_x, self._cur_x)
         return obs, rew, done, info
+
+class RandomGameReset(gym.Wrapper):
+    def __init__(self, env, state=None):
+        """Reset game to a random level."""
+        super().__init__(env)
+        self.state = state
+
+    def step(self, action):
+        return self.env.step(action)
+
+    def reset(self):
+        # Reset to a random level (but don't change the game)
+        try:
+            game = self.env.unwrapped.gamename
+        except AttributeError:
+            logger.warning('no game name')
+            pass
+        else:
+            game_path = retro.get_game_path(game)
+
+            # pick a random state that's in the same game
+            game_states = train_states[train_states.game == game]
+            if self.state:
+                game_states = game_states[game_states.state.str.contains(self.state)]
+
+            # Load
+            choice = game_states.sample().iloc[0]
+            state = choice.state + '.state'
+            logger.info('reseting to', game, state)
+            with gzip.open(os.path.join(game_path, state), 'rb') as fh:
+                self.env.unwrapped.initial_state = fh.read()
+
+        return self.env.reset()
