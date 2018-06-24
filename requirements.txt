@@ -1,0 +1,5 @@
+-e git+https://github.com/ml-jku/baselines-rudder.git@caf1e1eef962f0e0b7151e84a2ebbaab733a9cb6#egg=baselines
+tensorflow-gpu==1.5.0
+-e git+https://github.com/bioinf-jku/tensorflow-layer-library.git@7dd662e475b6048d970dd3e6db0ad2961fbeca59#egg=TeLL
+gym-retro==0.5.4
+-e git+https://github.com/openai/retro-contest.git@476a790f66f5bc8fde068a77c477aa1531efb8b1#egg=retro_contest_support&subdirectory=support
