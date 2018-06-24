@@ -2,6 +2,11 @@
 
 """
 Train an agent on Sonic using PPO2 from OpenAI Baselines.
+
+Run with:
+```bash
+python ppo2_agent.py   --config configs/sonic.json
+```
 """
 
 import tensorflow as tf
@@ -10,6 +15,7 @@ import os
 import sys
 import datetime as dt
 import numpy as np
+import logging
 
 from baselines.common.vec_env.dummy_vec_env import DummyVecEnv
 import baselines.ppo2_rudder.ppo2_rudder as ppo2_rudder
@@ -25,6 +31,11 @@ from TeLL.utility.misc import make_sure_path_exists, Tee
 #  Due to a garbage-collector bug with matplotlib/GPU, launch_plotting_daemon needs so be called before tensorflow
 #  import
 launch_plotting_daemon(num_workers=3)
+
+
+# Log to file and stream
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logger_file = logging.getLogger(__file__)
 
 
 def train(env_id, num_timesteps, policy, working_dir, config):
@@ -64,7 +75,7 @@ def train(env_id, num_timesteps, policy, working_dir, config):
     # Start Tensorflow session
     print("Preparing Logger...")
 
-    gym.logger.setLevel(logging.WARN)
+    gym.logger.setLevel(logging.INFO)
     print("Starting session...")
     tf_session = tf.Session(config=tf_config).__enter__()
 
@@ -76,7 +87,9 @@ def train(env_id, num_timesteps, policy, working_dir, config):
 
     def make_env(rank):
         def env_fn():
+            np.random.seed(rnd_seed + rank)
             env = sonic_env()
+            env.unwrapped.rank = rank
             env.seed(rnd_seed + rank)
             env = bench.Monitor(env, logger.get_dir() and osp.join(logger.get_dir(), str(rank)))
             return env
@@ -92,7 +105,7 @@ def train(env_id, num_timesteps, policy, working_dir, config):
 
     # Enter learning
     policy = {'cnn': CnnPolicy, 'lstmdense': LstmPolicyDense, 'lstm': LstmPolicy}[policy]
-    ppo2_rudder.learn(policy=policy, env=env, nsteps=4096, nminibatches=8, lam=0.95, gamma=0.99, noptepochs=3,
+    ppo2_rudder.learn(policy=policy, env=env, nsteps=1024, nminibatches=4, lam=0.95, gamma=0.99, noptepochs=3,
                       log_interval=1, ent_coef=bl_config['ent_coef'], lr=lambda f: f * 2.5e-4 * bl_config['lr_coef'],
                       cliprange=lambda f: f * 0.1, total_timesteps=int(num_timesteps * 1.1), tf_session=tf_session,
                       working_dir=working_dir, config=config,
