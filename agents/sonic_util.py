@@ -21,16 +21,17 @@ def make_env(stack=True, scale_rew=True):
     """
     Create an environment with some standard wrappers.
     """
-    env = make("SonicTheHedgehog2-Genesis", state="EmeraldHillZone.Act2")
+    start_state = train_states.sample().iloc[0]
+    env = make(game=start_state.game, state=start_state.state)
     env = SonicDiscretizer(env)
     env = AllowBacktracking(env)
     env = RandomGameReset(env)
+    env = EpisodeInfo(env)
     if scale_rew:
         env = RewardScaler(env)
     env = WarpFrame(env)
     # if stack:
     #     env = FrameStack(env, 4)
-    env = EpisodeInfo(env)
     return env
 
 class SonicDiscretizer(gym.ActionWrapper):
