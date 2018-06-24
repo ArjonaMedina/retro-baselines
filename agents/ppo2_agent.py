@@ -105,13 +105,25 @@ def train(env_id, num_timesteps, policy, working_dir, config):
 
     # Enter learning
     policy = {'cnn': CnnPolicy, 'lstmdense': LstmPolicyDense, 'lstm': LstmPolicy}[policy]
-    ppo2_rudder.learn(policy=policy, env=env, nsteps=1024, nminibatches=4, lam=0.95, gamma=0.99, noptepochs=3,
-                      log_interval=1, ent_coef=bl_config['ent_coef'], lr=lambda f: f * 2.5e-4 * bl_config['lr_coef'],
-                      cliprange=lambda f: f * 0.1, total_timesteps=int(num_timesteps * 1.1), tf_session=tf_session,
-                      working_dir=working_dir, config=config,
-                      plotting=dict(save_subplots=save_subplots, save_movie=save_movie,
-                                    save_subplots_line_plots=save_subplots_line_plots),
-                      rnd_gen=rnd_gen)
+    ppo2_rudder.learn(
+        policy=policy,
+        env=env,
+        nsteps=1024,
+        nminibatches=2,
+        lam=0.95,
+        gamma=0.99,
+        noptepochs=3,
+        log_interval=1,
+        ent_coef=bl_config['ent_coef'],
+        lr=lambda f: f * 2.5e-4 * bl_config['lr_coef'],
+        cliprange=lambda f: f * 0.1,
+        total_timesteps=int(num_timesteps * 1.1), tf_session=tf_session,
+        working_dir=working_dir,
+        config=config,
+        plotting=dict(save_subplots=save_subplots, save_movie=save_movie,
+                      save_subplots_line_plots=save_subplots_line_plots),
+        rnd_gen=rnd_gen
+    )
 
 
 if __name__ == '__main__':
