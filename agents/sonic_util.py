@@ -109,13 +109,13 @@ class RandomGameReset(gym.Wrapper):
 
             # pick a random state that's in the same game
             game_states = train_states[train_states.game == game]
-            if self.state:
-                game_states = game_states[game_states.state.str.contains(self.state)]
+            # if self.state:
+            #     game_states = game_states[game_states.state.str.contains(self.state)]
 
             # Load
             choice = game_states.sample().iloc[0]
             state = choice.state + '.state'
-            logger.info('reseting to', game, state)
+            logger.info('reseting env %s to %s %s', self.unwrapped.rank, game, state)
             with gzip.open(os.path.join(game_path, state), 'rb') as fh:
                 self.env.unwrapped.initial_state = fh.read()
 
