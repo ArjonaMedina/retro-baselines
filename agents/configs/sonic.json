@@ -1,34 +1,38 @@
 {
   "specs": "Sonic_policy_cnn",
   "cuda_gpu": 0,
-  "inter_op_parallelism_threads": 8,
-  "intra_op_parallelism_threads": 8,
+  "inter_op_parallelism_threads": 6,
+  "intra_op_parallelism_threads": 6,
   "tensorflow_allow_growth": true,
   "random_seed": 123,
-  "max_n_frames": 108000,
+  "max_n_frames": 10800,
   "policy": "cnn",
-  "working_dir": "../outputs/workingdir/ppo2_rudder",
+  "working_dir": "../outputs/ppo2_rudder",
   "plot_at": 10,
-  "save_at": 1000,
+  "save_at": 10,
   "n_savefiles": 5,
   "load_file_dict": {
+      "rr_buffer": "../outputs/ppo2_rudder/Sonic_policy_cnn/2018-07-01T06-47-52/saves/state-1340.h5py",
+      "states": "../outputs/ppo2_rudder/Sonic_policy_cnn/2018-07-01T06-47-52/saves/state-1340.pkl.zip",
+      "model": "../outputs/ppo2_rudder/Sonic_policy_cnn/2018-07-01T06-47-52/saves/checkpoint-1340",
+      "RR": "../outputs/ppo2_rudder/Sonic_policy_cnn/2018-07-01T06-47-52/saves/checkpoint-1340"
   },
   "example_load_file_dict": {
-    "rr_buffer": "/FOLDER/saves/state-3700.h5py",
-    "states": "/FOLDER/saves/state-3700.pkl.zip",
-    "model": "/FOLDER/saves/checkpoint-3700",
-    "RR": "/FOLDER/saves/checkpoint-3700"
+    "rr_buffer": "outputs/ppo2_rudder/Sonic_policy_cnn/2018-06-25T17-48-16/saves/state-196.h5py",
+    "states": "outputs/ppo2_rudder/Sonic_policy_cnn/2018-06-25T17-48-16/saves/state-196.pkl.zip",
+    "model": "outputs/ppo2_rudder/Sonic_policy_cnn/2018-06-25T17-48-16/saves/checkpoint-196",
+    "RR": "outputs/ppo2_rudder/Sonic_policy_cnn/2018-06-25T17-48-16/saves/checkpoint-196"
   },
   "bl_config": {
     "env": "SonicNoFrameskip-v4",
-    "num_timesteps": 200e6,
-    "episode_reward":true,
+    "num_timesteps": 100e6,
+    "episode_reward":false,
     "episode_life":false,
     "episode_frame":false,
-    "temperature_decay": true,
+    "temperature_decay": false,
     "num_actors": 8,
     "lr_coef": 1,
-    "ent_coef": 0.01
+    "ent_coef": 0.05
   },
   "rudder_config": {
     "write_histograms": false,
@@ -90,6 +94,15 @@
         {
           "type": "ConvLayer",
           "name": "c3",
+          "num_outputs": 64,
+          "ksize": 3,
+          "padding": "VALID",
+          "a": "tensorflow.nn.relu",
+          "weight_initializer": "0.1:tensorflow.orthogonal_initializer"
+        },
+        {
+          "type": "ConvLayer",
+          "name": "c4",
           "num_outputs": 32,
           "ksize": 3,
           "padding": "VALID",
@@ -142,7 +155,7 @@
       "downscale_lr_policylag": true,
       "optimizer": "AdamOptimizer",
       "optimizer_params": {
-        "learning_rate": 1e-4
+        "learning_rate": 3e-4
       },
       "l1": 1e-7,
       "l2": 0,

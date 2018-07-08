@@ -8,8 +8,9 @@ import gzip
 import retro
 import os
 from baselines.common.atari_wrappers import WarpFrame, FrameStack
-from retro_contest.local import make
+# from retro_contest.local import make
 import logging
+import retro_contest
 
 import pandas as pd
 train_states = pd.read_csv('../data/sonic_env/sonic-train.csv')
@@ -17,14 +18,32 @@ validation_states = pd.read_csv('../data/sonic_env/sonic-validation.csv')
 
 logger = logging.getLogger(__name__)
 
+
+def make(game, state, discrete_actions=False, bk2dir=None, max_episode_steps=4000):
+    """Make the competition environment."""
+    print('game:', game, 'state:', state)
+    use_restricted_actions = retro.ACTIONS_FILTERED
+    if discrete_actions:
+        use_restricted_actions = retro.ACTIONS_DISCRETE
+    try:
+        env = retro.make(game, state, scenario='contest', use_restricted_actions=use_restricted_actions)
+    except Exception:
+        env = retro.make(game, state, use_restricted_actions=use_restricted_actions)
+    if bk2dir:
+        env.auto_record(bk2dir)
+    env = retro_contest.StochasticFrameSkip(env, n=4, stickprob=0.25)
+    env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
+    return env
+
+
 def make_env(stack=True, scale_rew=True):
     """
     Create an environment with some standard wrappers.
     """
     start_state = train_states.sample().iloc[0]
-    env = make(game=start_state.game, state=start_state.state)
+    env = make(game=start_state.game, state=start_state.state, max_episode_steps=600)
     env = SonicDiscretizer(env)
-    env = AllowBacktracking(env)
+    # env = AllowBacktracking(env)
     env = RandomGameReset(env)
     env = EpisodeInfo(env)
     if scale_rew:
@@ -32,11 +51,13 @@ def make_env(stack=True, scale_rew=True):
     env = WarpFrame(env)
     return env
 
+
 class SonicDiscretizer(gym.ActionWrapper):
     """
     Wrap a gym-retro environment and make it use discrete
     actions for the Sonic game.
     """
+
     def __init__(self, env):
         super(SonicDiscretizer, self).__init__(env)
         buttons = ["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"]
@@ -50,8 +71,9 @@ class SonicDiscretizer(gym.ActionWrapper):
             self._actions.append(arr)
         self.action_space = gym.spaces.Discrete(len(self._actions))
 
-    def action(self, a): # pylint: disable=W0221
+    def action(self, a):  # pylint: disable=W0221
         return self._actions[a].copy()
+
 
 class RewardScaler(gym.RewardWrapper):
     """
@@ -60,8 +82,10 @@ class RewardScaler(gym.RewardWrapper):
     This is incredibly important and effects performance
     drastically.
     """
+
     def reward(self, reward):
         return reward * 0.01
+
 
 class AllowBacktracking(gym.Wrapper):
     """
@@ -70,22 +94,24 @@ class AllowBacktracking(gym.Wrapper):
     from exploring backwards if there is no way to advance
     head-on in the level.
     """
+
     def __init__(self, env):
         super(AllowBacktracking, self).__init__(env)
         self._cur_x = 0
         self._max_x = 0
 
-    def reset(self, **kwargs): # pylint: disable=E0202
+    def reset(self, **kwargs):  # pylint: disable=E0202
         self._cur_x = 0
         self._max_x = 0
         return self.env.reset(**kwargs)
 
-    def step(self, action): # pylint: disable=E0202
+    def step(self, action):  # pylint: disable=E0202
         obs, rew, done, info = self.env.step(action)
         self._cur_x += rew
         rew = max(0, self._cur_x - self._max_x)
         self._max_x = max(self._max_x, self._cur_x)
         return obs, rew, done, info
+
 
 class RandomGameReset(gym.Wrapper):
     def __init__(self, env, state=None):
@@ -120,21 +146,23 @@ class RandomGameReset(gym.Wrapper):
 
         return self.env.reset()
 
+
 class EpisodeInfo(gym.Wrapper):
     """
     Add information about episode end and total final reward
     """
+
     def __init__(self, env):
         super(EpisodeInfo, self).__init__(env)
         self._ep_len = 0
         self._ep_rew_total = 0
 
-    def reset(self, **kwargs): # pylint: disable=E0202
+    def reset(self, **kwargs):  # pylint: disable=E0202
         self._ep_len = 0
         self._ep_rew_total = 0
         return self.env.reset(**kwargs)
 
-    def step(self, action): # pylint: disable=E0202
+    def step(self, action):  # pylint: disable=E0202
         obs, rew, done, info = self.env.step(action)
         self._ep_len += 1
         self._ep_rew_total += rew

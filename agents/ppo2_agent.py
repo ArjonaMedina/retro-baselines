@@ -17,9 +17,7 @@ import datetime as dt
 import numpy as np
 import logging
 
-from baselines.common.vec_env.dummy_vec_env import DummyVecEnv
 import baselines.ppo2_rudder.ppo2_rudder as ppo2_rudder
-import baselines.ppo2_rudder.policies as policies
 from baselines import bench, logger
 from sonic_util import make_env as sonic_env
 
@@ -42,16 +40,12 @@ def train(env_id, num_timesteps, policy, working_dir, config):
     """Run PPO until the environment throws an exception."""
     # Original modules
     from baselines.common import set_global_seeds
-    from baselines.common.atari_wrappers import make_atari
     from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
     import logging
     import gym
     import os.path as osp
-    import tensorflow as tf
     # Module modified for RUDDER
     from baselines.common.vec_env.vec_frame_stack import VecFrameStackNoZeroPadding
-    from baselines.common.atari_wrappers import wrap_modified_rr
-    from baselines.ppo2_rudder import ppo2_rudder
     from baselines.ppo2_rudder.policies import CnnPolicy, LstmPolicy, LstmPolicyDense
 
     bl_config = config.bl_config
@@ -88,7 +82,7 @@ def train(env_id, num_timesteps, policy, working_dir, config):
     def make_env(rank):
         def env_fn():
             np.random.seed(rnd_seed + rank)
-            env = sonic_env()
+            env = sonic_env(scale_rew=True)
             env.unwrapped.rank = rank
             env.seed(rnd_seed + rank)
             env = bench.Monitor(env, logger.get_dir() and osp.join(logger.get_dir(), str(rank)))
@@ -109,14 +103,14 @@ def train(env_id, num_timesteps, policy, working_dir, config):
         policy=policy,
         env=env,
         nsteps=1024,
-        nminibatches=2,
+        nminibatches=4,
         lam=0.95,
         gamma=0.99,
-        noptepochs=3,
+        noptepochs=4,
         log_interval=1,
         ent_coef=bl_config['ent_coef'],
-        lr=lambda f: f * 2.5e-4 * bl_config['lr_coef'],
-        cliprange=lambda f: f * 0.1,
+        lr=lambda f: f * 6e-5 * bl_config['lr_coef'],
+        cliprange=lambda f: f * 0.2,
         total_timesteps=int(num_timesteps * 1.1), tf_session=tf_session,
         working_dir=working_dir,
         config=config,
